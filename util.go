@@ -1,4 +1,4 @@
-package go_gaku
+package main
 
 import (
 	"errors"
