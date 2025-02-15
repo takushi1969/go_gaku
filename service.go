@@ -5,6 +5,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"net/http"
+	"io"
 )
 
 func removeEps() {
@@ -19,6 +22,24 @@ func removeEps() {
 	}
 }
 
+func DownloadFile(filepath string, url string) error {
+
+    resp, err := http.Get(url)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    out, err := os.Create(filepath)
+    if err != nil {
+        return err
+    }
+    defer out.Close()
+
+    _, err = io.Copy(out, resp.Body)
+    return err
+}
+
 func UpdateEps() {
 	gogaku := ReadMainPrf()
 
@@ -28,16 +49,23 @@ func UpdateEps() {
 		langdir := filepath.Join(LANGS_DIR, lang)
 		CheckDir(langdir)
 		for _, prg := range prgs {
-			eps_json := filepath.Join(langdir, prg.Title + ".json")
-			if _, ok := os.Stat(eps_json); ok != nil {
-				title, eps := GetEps(prg)
-				log.Println(title)
-				v, _ := json.Marshal(eps)
-				err := os.WriteFile(eps_json, v, 0o644)
-				if err != nil {
-					log.Fatal(err)
-				}
+			if ! prg.RecordFlag {
+				continue
 			}
+			eps_json := filepath.Join(langdir, prg.Title + ".json")
+			_, eps := GetEps(prg)
+			v, _ := json.Marshal(eps)
+			err := os.WriteFile(eps_json, v, 0o644)
+			if err != nil {
+				log.Fatal(err)
+			}
+			
+			if prg.CoverJPG == "" {
+				continue
+			}
+			cover_elms := strings.Split(prg.CoverJPG, "/")
+			img_path := filepath.Join(langdir, cover_elms[len(cover_elms)-1])
+			DownloadFile(img_path, prg.CoverJPG)
 		}
 	}
 }

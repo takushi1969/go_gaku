@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/url"
 	"net/http"
 	"regexp"
 	"strings"
@@ -13,17 +14,19 @@ type Program struct {
 	Title string
 	SiteID string
 	CornerID string
+	RecordFlag bool
+	CoverJPG string
 }
 
-func GetPrgs(url string) []Program {
+func GetPrgs(lang_url string) []Program {
 	const nhk_web_url = "https://www.nhk.or.jp/gogaku/"
 	var prgs []Program
 
-	if strings.Index(url, nhk_web_url) != 0 {
+	if strings.Index(lang_url, nhk_web_url) != 0 {
 		log.Fatal("the argument should start with " + nhk_web_url)
 	}
 	
-	res, err := http.Get(url)
+	res, err := http.Get(lang_url)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,6 +43,13 @@ func GetPrgs(url string) []Program {
 
 	doc.Find("#listRadio .programbox").Each(
 		func(i int, prg *goquery.Selection) {
+			img_path, exist := prg.Find(".thumbnail img").First().Attr("src")
+			img_url := ""
+			if exist {
+				if img_url, err = url.JoinPath(lang_url, img_path); err == nil {
+					log.Println(img_url)
+				}
+			}
 			title := prg.Find(".programtitle").First().Text()
 			prg.Find("a").Each(
 				func(i int, anchor *goquery.Selection) {
@@ -50,9 +60,10 @@ func GetPrgs(url string) []Program {
 						if matched != nil {
 							prgs = append(prgs,
 								Program{
-									title,
-									matched[0][1],
-									matched[0][2],
+									Title: title,
+									SiteID: matched[0][1],
+									CornerID: matched[0][2],
+									CoverJPG: img_url,
 								})
 						}
 					}

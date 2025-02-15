@@ -66,16 +66,30 @@ func WriteMainPrf(url string, force bool) {
 		}
 	}
 	
-	if gogaku == nil {
+	re := regexp.MustCompile(`.*/(.*)`)
+	lang := (re.FindStringSubmatch(url))[1]
+
+	prgs := GetPrgs(url)
+	if gogaku != nil {
+		for _, old_prg := range gogaku.Languages[lang] {
+			if old_prg.RecordFlag == false {
+				continue
+			}
+			for n, new_prg := range prgs {
+				if old_prg.Title == new_prg.Title {
+					log.Println(n, old_prg, new_prg)
+					prgs[n].RecordFlag = old_prg.RecordFlag
+					break
+				}
+			}
+		}
+	} else {
+		log.Println("route check")
 		gogaku = &Gogaku{}
 		gogaku.Languages = make(map[string][]Program)
 	}
 
-	prgs := GetPrgs(url)
-
-	re := regexp.MustCompile(`.*/(.*)`)
-	lang := (re.FindStringSubmatch(url))[1]
-
+	log.Println(prgs[6])
 	gogaku.Version = PRF_VERSION
 	gogaku.Update = time.Now()
 	gogaku.Languages[lang] = prgs
