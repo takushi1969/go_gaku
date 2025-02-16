@@ -13,27 +13,29 @@ import (
 
 type Gogaku struct {
 	Version float64
-	Update time.Time
-	Languages map[string][]Program
+	UpdateTime time.Time
+	Languages map[string][]ProgramInfo
 }
 
 const PRF_VERSION = 1.0
 var PRF_DIR string
 var MAIN_PRF string
 var LANGS_DIR string
+var DL_DIR string
 
 func init() {
 	PRF_DIR = filepath.Join(os.Getenv("HOME"),  ".go_gaku")
 	MAIN_PRF = filepath.Join(PRF_DIR, "programs.json")
 	LANGS_DIR = filepath.Join(PRF_DIR, "languages")
+	DL_DIR = filepath.Join(os.Getenv("HOME"),  "go_gaku")
 
-	for _, dir := range []string{PRF_DIR, LANGS_DIR} {
-		CheckDir(dir)
+	for _, dir := range []string{PRF_DIR, LANGS_DIR, DL_DIR} {
+		createDir(dir)
 	}
 }
 
 
-func ReadMainPrf() (*Gogaku) {
+func readMainPrf() *Gogaku {
 	var gogaku Gogaku
 
 	val, err := os.ReadFile(MAIN_PRF)
@@ -52,40 +54,55 @@ func ReadMainPrf() (*Gogaku) {
 
 	if gogaku.Version != PRF_VERSION {
 		log.Fatal("Unsupported Version")
+		return nil
 	}
 
 	return &gogaku
 }
 
-func WriteMainPrf(url string, force bool) {
-	gogaku := ReadMainPrf()
+func updateMainPrf(gogakuUrl string, force bool) *Gogaku {
+	gogaku := readMainPrf()
 
-	if force == false && gogaku != nil {
-		if time.Now().Sub(gogaku.Update) < time.Duration(7 * 24 * time.Hour) {
-			return
-		}
+	if force == false&&
+		gogaku != nil &&
+		time.Now().Sub(gogaku.UpdateTime) < time.Duration(7 * 24 * time.Hour) {
+		return gogaku
 	}
 	
-	if gogaku == nil {
-		gogaku = &Gogaku{}
-		gogaku.Languages = make(map[string][]Program)
-	}
-
-	prgs := GetPrgs(url)
-
 	re := regexp.MustCompile(`.*/(.*)`)
-	lang := (re.FindStringSubmatch(url))[1]
+	lang := (re.FindStringSubmatch(gogakuUrl))[1]
+
+	prgs := getPrgs(gogakuUrl)
+	if gogaku != nil {
+		for _, oldPrg := range gogaku.Languages[lang] {
+			if oldPrg.DlFlag == false {
+				continue
+			}
+			for n, newPrg := range prgs {
+				if oldPrg.Title == newPrg.Title {
+					prgs[n].DlFlag = oldPrg.DlFlag
+					break
+				}
+			}
+		}
+	} else {
+		gogaku = new(Gogaku)
+		gogaku.Languages = make(map[string][]ProgramInfo)
+	}
 
 	gogaku.Version = PRF_VERSION
-	gogaku.Update = time.Now()
+	gogaku.UpdateTime = time.Now()
 	gogaku.Languages[lang] = prgs
-
-	v, _ := json.Marshal(gogaku)
-	
-	err := os.WriteFile(MAIN_PRF, v, 0o644)
+	v, err := json.Marshal(gogaku)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = os.WriteFile(MAIN_PRF, v, 0o644)
 	if err != nil {
 	 	log.Fatal(err)
 	}
+
+	return gogaku
 }
 
 // Local Variables:
