@@ -24,10 +24,15 @@ var LANGS_DIR string
 var DL_DIR string
 
 func init() {
-	PRF_DIR = filepath.Join(os.Getenv("HOME"),  ".go_gaku")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Panic("Can't get Home directory")
+	}
+	
+	PRF_DIR = filepath.Join(homeDir,  ".go_gaku")
 	MAIN_PRF = filepath.Join(PRF_DIR, "programs.json")
 	LANGS_DIR = filepath.Join(PRF_DIR, "languages")
-	DL_DIR = filepath.Join(os.Getenv("HOME"),  "go_gaku")
+	DL_DIR = filepath.Join(homeDir,  "go_gaku")
 
 	for _, dir := range []string{PRF_DIR, LANGS_DIR, DL_DIR} {
 		createDir(dir)
