@@ -10,29 +10,30 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-type Program struct {
+type ProgramInfo struct {
 	Title string
 	SiteID string
 	CornerID string
-	RecordFlag bool
-	CoverJPG string
+	DlFlag bool
+	CoverImg string
 }
 
-func getImgUrl(prg *goquery.Selection, lang_url string) string {
-	img_url, exist := prg.Find(".thumbnail img").First().Attr("src")
+func getImgUrl(prg *goquery.Selection, langUrl string) string {
+	imgUrl, exist := prg.Find(".thumbnail img").First().Attr("src")
 	if exist {
-		img_url, err := url.JoinPath(lang_url, img_url)
-		if err == nil {
-			log.Println(img_url)
-			img_url = ""
+		var err error
+		imgUrl, err = url.JoinPath(langUrl, imgUrl)
+		if err != nil {
+			log.Println(imgUrl)
+			imgUrl = ""
 		}
 	}
 
-	return img_url
+	return imgUrl
 }
 
-func parsePrg(anchor *goquery.Selection, title, img_url string) *Program {
-	var prg *Program
+func parsePrg(anchor *goquery.Selection, title, imgUrl string) *ProgramInfo {
+	var prg *ProgramInfo
 	
 	href, exist := anchor.Attr("href")
 	if ! exist {
@@ -42,26 +43,26 @@ func parsePrg(anchor *goquery.Selection, title, img_url string) *Program {
 	exp, _ := regexp.Compile(`radio/ondemand/detail\.html\?p=(.*?)_([^"]+)`)
 	matched := exp.FindAllStringSubmatch(href, -1)
 	if matched != nil {
-		prg = new(Program)
+		prg = new(ProgramInfo)
 		prg.Title = title
 		prg.SiteID = matched[0][1]
 		prg.CornerID = matched[0][2]
-		prg.CoverJPG = img_url
+		prg.CoverImg = imgUrl
 	}
 
 	return prg
 }
 	
-func parsePrgs(doc *goquery.Document, lang_url string) []Program {
-	var prgs []Program
+func parsePrgs(doc *goquery.Document, langUrl string) []ProgramInfo {
+	var prgs []ProgramInfo
 	
 	doc.Find("#listRadio .programbox").Each(
 		func(i int, prg *goquery.Selection) {
-			img_url := getImgUrl(prg, lang_url)
+			imgUrl := getImgUrl(prg, langUrl)
 			title := prg.Find(".programtitle").First().Text()
 			prg.Find("a").Each(
 				func(i int, anchor *goquery.Selection) {
-					prg := parsePrg(anchor, title, img_url)
+					prg := parsePrg(anchor, title, imgUrl)
 					if prg != nil {
 						prgs = append(prgs, *prg)
 					}
@@ -70,15 +71,15 @@ func parsePrgs(doc *goquery.Document, lang_url string) []Program {
 	return prgs
 }
 
-func getPrgs(lang_url string) []Program {
+func getPrgs(langUrl string) []ProgramInfo {
 	const nhk_web_url = "https://www.nhk.or.jp/gogaku/"
-	var prgs []Program
+	var prgs []ProgramInfo
 
-	if strings.Index(lang_url, nhk_web_url) != 0 {
+	if strings.Index(langUrl, nhk_web_url) != 0 {
 		log.Fatal("the argument should start with " + nhk_web_url)
 	}
 	
-	res, err := http.Get(lang_url)
+	res, err := http.Get(langUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +94,7 @@ func getPrgs(lang_url string) []Program {
 		log.Fatal(err)
 	}
 
-	prgs = parsePrgs(doc, lang_url)
+	prgs = parsePrgs(doc, langUrl)
 
 	return prgs
 }

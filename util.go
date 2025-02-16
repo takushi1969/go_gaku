@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func CheckDir(dir string) { 
+func createDir(dir string) { 
 	if _, err := os.Stat(dir); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			err = os.Mkdir(dir, 0o755)
