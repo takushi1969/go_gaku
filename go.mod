@@ -6,6 +6,7 @@ require (
 	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
 	github.com/PuerkitoBio/goquery v1.10.1
 	github.com/bogem/id3v2 v1.2.0
+	github.com/kardianos/service v1.2.2
 	github.com/tidwall/gjson v1.18.0
 	github.com/u2takey/ffmpeg-go v0.5.0
 )
@@ -18,5 +19,6 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/u2takey/go-utils v0.3.1 // indirect
 	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 )
