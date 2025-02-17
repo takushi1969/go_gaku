@@ -57,37 +57,6 @@ func removeEpsJSON() {
 		})
 }
 
-func (prgInf ProgramInfo)downloadCover(profLangDir string) string {
-
-	token := strings.Split(prgInf.CoverImg, "/")
-	imgPath := filepath.Join(profLangDir, token[len(token)-1])
-	if _, err := os.Stat(imgPath); err == nil {
-		return imgPath
-	}
-		
-    resp, err := http.Get(prgInf.CoverImg)
-    if err != nil {
-		log.Println(err)
-		return ""
-    }
-    defer resp.Body.Close()
-
-    out, err := os.Create(imgPath)
-    if err != nil {
-		log.Println(err)
-		return ""
-    }
-    defer out.Close()
-
-    _, err = io.Copy(out, resp.Body)
-    if err != nil {
-		log.Println(err)
-		return ""
-    }
-
-	return imgPath
-}
-
 func (prgInf ProgramInfo)getJSON() string {
 	res, err := http.Get(fmt.Sprintf(eps_url, prgInf.SiteID, prgInf.CornerID))
 	if err != nil {
@@ -125,24 +94,26 @@ func (prgInf ProgramInfo)getEps() ([]EpisodeInfo) {
 	return eps
 }
 
-func (prgInf ProgramInfo)updateEps(profLangDir string) []EpisodeInfo {
+func (prgInf ProgramInfo)updateEps() []EpisodeInfo {
 	var epsInf []EpisodeInfo
 	
-	createDir(profLangDir)
+	createDir(prgInf.EpInfDir)
 
-	epsPath := filepath.Join(profLangDir, prgInf.Title + ".json")
-	if _, err := os.Stat(epsPath); err != nil {
+	if _, err := os.Stat(prgInf.EpInfFile); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			eps := prgInf.getEps()
-			v, _ := json.Marshal(eps)
-			err := os.WriteFile(epsPath, v, 0o644)
+			epsInf := prgInf.getEps()
+			v, _ := json.Marshal(epsInf)
+			err := os.WriteFile(prgInf.EpInfFile, v, 0o644)
 			if err != nil {
 				log.Fatal(err)
 			}
+			return epsInf
+		} else {
+			log.Fatal(err)
 		}
 	}
 
-	val, err := os.ReadFile(epsPath)
+	val, err := os.ReadFile(prgInf.EpInfFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -155,8 +126,8 @@ func (prgInf ProgramInfo)updateEps(profLangDir string) []EpisodeInfo {
 	return epsInf
 }
 
-func (epInf EpisodeInfo)mp3file() string {
-	output := epInf.Date + "_" + epInf.Title + ".mp3"
+func (epInf EpisodeInfo)mp3file(dlDir string) string {
+	output := filepath.Join(dlDir, epInf.Date + "_" + epInf.Title + ".mp3")
 
 	return output
 }
@@ -168,8 +139,8 @@ func (epInf EpisodeInfo)notify(cover string) {
 	})
 	notify.Push(
 		"saved.",
-		epInf.mp3file(),
-		"icon.png",
+		epInf.Date + "_" + epInf.Title + ".mp3",
+		cover,
 		notificator.UR_NORMAL)
 }
 
@@ -226,8 +197,8 @@ func (epInf EpisodeInfo)writeTag(mp3file, album, cover string) {
 	}
 }
 
-func (epInf EpisodeInfo)download(album, cover string) {
-	output := epInf.mp3file()
+func (epInf EpisodeInfo)download(prgInf ProgramInfo, cover string) {
+	output := epInf.mp3file(prgInf.DlDir)
 	_, err := os.Stat(output) 
 	if err == nil  {
 		return
@@ -251,15 +222,17 @@ func (epInf EpisodeInfo)download(album, cover string) {
 		}
 		return
 	}
-	epInf.writeTag(tmpMp3.Name(), album, cover)
+	epInf.writeTag(tmpMp3.Name(), prgInf.Title, cover)
 	os.Rename(tmpMp3.Name(), output)
+	epInf.notify(cover)
 }
 
-func (prgInf ProgramInfo)downloadEps(profLangDir string) {
-	coverImg := prgInf.downloadCover(profLangDir)
-	epsInf := prgInf.updateEps(profLangDir)
+func (prgInf ProgramInfo)downloadEps() {
+	coverImg := prgInf.downloadCover()
+	epsInf := prgInf.updateEps()
+	createDir(prgInf.DlDir)
 	for _, epinf := range epsInf {
-		epinf.download(prgInf.Title, coverImg)
+		epinf.download(prgInf, coverImg)
 	}
 }
 

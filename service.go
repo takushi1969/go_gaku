@@ -9,14 +9,15 @@ func update() {
 	
 	gogaku := updateMainPrf("https://www.nhk.or.jp/gogaku/english", false)
 	for lang, prgs := range gogaku.Languages {
-		langdir := filepath.Join(LANGS_DIR, lang)
-		createDir(langdir)
+		for _, dir := range []string{LANGS_DIR, DL_DIR} {
+			createDir(filepath.Join(dir, lang))
+		}
 		
 		for _, prg := range prgs {
 			if prg.DlFlag == false {
 				continue
 			}
-			prg.downloadEps(langdir)
+			prg.downloadEps()
 		}
 	}
 }

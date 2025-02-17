@@ -39,7 +39,6 @@ func init() {
 	}
 }
 
-
 func readMainPrf() *Gogaku {
 	var gogaku Gogaku
 
